@@ -15,3 +15,4 @@ for x in cursor:
 	i+=1
 	if(i==3):
 		break
+f.close()

@@ -1,0 +1,145 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: try-
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.4, pipelines.kubeflow.org/pipeline_compilation_time: '2021-07-13T11:51:42.907792',
+    pipelines.kubeflow.org/pipeline_spec: '{"name": "try"}'}
+  labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.4}
+spec:
+  entrypoint: try
+  templates:
+  - name: read
+    container:
+      args: [read.py]
+      command: [python]
+      image: star16231108/mynewpy:v1
+    outputs:
+      artifacts:
+      - {name: read-data, path: /tmp/result}
+    metadata:
+      labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.4, pipelines.kubeflow.org/pipeline-sdk-type: kfp}
+  - name: tag
+    container:
+      args: [--text, /tmp/inputs/text/data, --output-text, /tmp/outputs/output_text/data]
+      command:
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def _make_parent_dirs_and_return_path(file_path: str):
+            import os
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            return file_path
+
+        def tag(text_path,output_text_path):
+            data=''
+            with open(text_path, 'r') as reader:
+                data=reader.read()
+            with open(output_text_path, 'w') as writer:
+                writer.write(data + 'tag\n')
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='Tag', description='')
+        _parser.add_argument("--text", dest="text_path", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--output-text", dest="output_text_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+        _parsed_args = vars(_parser.parse_args())
+
+        _outputs = tag(**_parsed_args)
+      image: python:3.7
+    inputs:
+      artifacts:
+      - {name: trans-output_text, path: /tmp/inputs/text/data}
+    outputs:
+      artifacts:
+      - {name: tag-output_text, path: /tmp/outputs/output_text/data}
+    metadata:
+      labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.4, pipelines.kubeflow.org/pipeline-sdk-type: kfp}
+      annotations: {pipelines.kubeflow.org/component_spec: '{"implementation": {"container":
+          {"args": ["--text", {"inputPath": "text"}, "--output-text", {"outputPath":
+          "output_text"}], "command": ["sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n    os.makedirs(os.path.dirname(file_path),
+          exist_ok=True)\n    return file_path\n\ndef tag(text_path,output_text_path):\n    data=''''\n    with
+          open(text_path, ''r'') as reader:\n        data=reader.read()\n    with
+          open(output_text_path, ''w'') as writer:\n        writer.write(data + ''tag\\n'')\n\nimport
+          argparse\n_parser = argparse.ArgumentParser(prog=''Tag'', description='''')\n_parser.add_argument(\"--text\",
+          dest=\"text_path\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--output-text\",
+          dest=\"output_text_path\", type=_make_parent_dirs_and_return_path, required=True,
+          default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\n_outputs
+          = tag(**_parsed_args)\n"], "image": "python:3.7"}}, "inputs": [{"name":
+          "text"}], "name": "Tag", "outputs": [{"name": "output_text"}]}', pipelines.kubeflow.org/component_ref: '{}'}
+  - name: trans
+    container:
+      args: [--text, /tmp/inputs/text/data, --output-text, /tmp/outputs/output_text/data]
+      command:
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def _make_parent_dirs_and_return_path(file_path: str):
+            import os
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            return file_path
+
+        def trans(text_path,output_text_path):
+            data=''
+            with open(text_path, 'r') as reader:
+                data=reader.read()
+            with open(output_text_path, 'w') as writer:
+                writer.write(data + 'trans\n')
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='Trans', description='')
+        _parser.add_argument("--text", dest="text_path", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--output-text", dest="output_text_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+        _parsed_args = vars(_parser.parse_args())
+
+        _outputs = trans(**_parsed_args)
+      image: python:3.7
+    inputs:
+      artifacts:
+      - {name: read-data, path: /tmp/inputs/text/data}
+    outputs:
+      artifacts:
+      - {name: trans-output_text, path: /tmp/outputs/output_text/data}
+    metadata:
+      labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.4, pipelines.kubeflow.org/pipeline-sdk-type: kfp}
+      annotations: {pipelines.kubeflow.org/component_spec: '{"implementation": {"container":
+          {"args": ["--text", {"inputPath": "text"}, "--output-text", {"outputPath":
+          "output_text"}], "command": ["sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n    os.makedirs(os.path.dirname(file_path),
+          exist_ok=True)\n    return file_path\n\ndef trans(text_path,output_text_path):\n    data=''''\n    with
+          open(text_path, ''r'') as reader:\n        data=reader.read()\n    with
+          open(output_text_path, ''w'') as writer:\n        writer.write(data + ''trans\\n'')\n\nimport
+          argparse\n_parser = argparse.ArgumentParser(prog=''Trans'', description='''')\n_parser.add_argument(\"--text\",
+          dest=\"text_path\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--output-text\",
+          dest=\"output_text_path\", type=_make_parent_dirs_and_return_path, required=True,
+          default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\n_outputs
+          = trans(**_parsed_args)\n"], "image": "python:3.7"}}, "inputs": [{"name":
+          "text"}], "name": "Trans", "outputs": [{"name": "output_text"}]}', pipelines.kubeflow.org/component_ref: '{}'}
+  - name: try
+    dag:
+      tasks:
+      - {name: read, template: read}
+      - name: tag
+        template: tag
+        dependencies: [trans]
+        arguments:
+          artifacts:
+          - {name: trans-output_text, from: '{{tasks.trans.outputs.artifacts.trans-output_text}}'}
+      - name: trans
+        template: trans
+        dependencies: [read]
+        arguments:
+          artifacts:
+          - {name: read-data, from: '{{tasks.read.outputs.artifacts.read-data}}'}
+  arguments:
+    parameters: []
+  serviceAccountName: pipeline-runner
