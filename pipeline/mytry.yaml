@@ -2,12 +2,41 @@ apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
   generateName: try-
-  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.4, pipelines.kubeflow.org/pipeline_compilation_time: '2021-07-15T10:37:09.293095',
-    pipelines.kubeflow.org/pipeline_spec: '{"name": "try"}'}
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.4, pipelines.kubeflow.org/pipeline_compilation_time: '2021-07-15T11:30:00.464611',
+    pipelines.kubeflow.org/pipeline_spec: '{"inputs": [{"name": "translate"}], "name":
+      "try"}'}
   labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.4}
 spec:
   entrypoint: try
   templates:
+  - name: condition-1
+    inputs:
+      artifacts:
+      - {name: read-output_text}
+    dag:
+      tasks:
+      - name: tag
+        template: tag
+        dependencies: [trans]
+        arguments:
+          artifacts:
+          - {name: trans-output_text, from: '{{tasks.trans.outputs.artifacts.trans-output_text}}'}
+      - name: trans
+        template: trans
+        arguments:
+          artifacts:
+          - {name: read-output_text, from: '{{inputs.artifacts.read-output_text}}'}
+  - name: condition-2
+    inputs:
+      artifacts:
+      - {name: read-output_text}
+    dag:
+      tasks:
+      - name: tag-2
+        template: tag-2
+        arguments:
+          artifacts:
+          - {name: read-output_text, from: '{{inputs.artifacts.read-output_text}}'}
   - name: read
     container:
       args: [--output-text, /tmp/outputs/output_text/data]
@@ -122,6 +151,60 @@ spec:
           [{"name": "text"}], "name": "Tag", "outputs": [{"name": "output_text"}]}',
         pipelines.kubeflow.org/component_ref: '{"digest": "338c6526b24e4dcd874f841a25a3ac4d9b7786ff462b7c8a100ec8ba22e49e7d",
           "url": "../components/tag.yaml"}'}
+  - name: tag-2
+    container:
+      args: [--text, /tmp/inputs/text/data, --output-text, /tmp/outputs/output_text/data]
+      command:
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def _make_parent_dirs_and_return_path(file_path: str):
+            import os
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            return file_path
+
+        def tag(text_path,output_text_path):
+            import numpy as np
+            import pandas as pd
+            data=pd.read_csv(text_path)
+            data=data[0:1]
+            data.to_csv(output_text_path,index=False)
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='Tag', description='')
+        _parser.add_argument("--text", dest="text_path", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--output-text", dest="output_text_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+        _parsed_args = vars(_parser.parse_args())
+
+        _outputs = tag(**_parsed_args)
+      image: star16231108/python:3.7
+    inputs:
+      artifacts:
+      - {name: read-output_text, path: /tmp/inputs/text/data}
+    outputs:
+      artifacts:
+      - {name: tag-2-output_text, path: /tmp/outputs/output_text/data}
+    metadata:
+      labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.4, pipelines.kubeflow.org/pipeline-sdk-type: kfp}
+      annotations: {pipelines.kubeflow.org/component_spec: '{"implementation": {"container":
+          {"args": ["--text", {"inputPath": "text"}, "--output-text", {"outputPath":
+          "output_text"}], "command": ["sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n    os.makedirs(os.path.dirname(file_path),
+          exist_ok=True)\n    return file_path\n\ndef tag(text_path,output_text_path):\n    import
+          numpy as np\n    import pandas as pd\n    data=pd.read_csv(text_path)\n    data=data[0:1]\n    data.to_csv(output_text_path,index=False)\n\nimport
+          argparse\n_parser = argparse.ArgumentParser(prog=''Tag'', description='''')\n_parser.add_argument(\"--text\",
+          dest=\"text_path\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--output-text\",
+          dest=\"output_text_path\", type=_make_parent_dirs_and_return_path, required=True,
+          default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\n_outputs
+          = tag(**_parsed_args)\n"], "image": "star16231108/python:3.7"}}, "inputs":
+          [{"name": "text"}], "name": "Tag", "outputs": [{"name": "output_text"}]}',
+        pipelines.kubeflow.org/component_ref: '{"digest": "338c6526b24e4dcd874f841a25a3ac4d9b7786ff462b7c8a100ec8ba22e49e7d",
+          "url": "../components/tag.yaml"}'}
   - name: trans
     container:
       args: [--text, /tmp/inputs/text/data, --output-text, /tmp/outputs/output_text/data]
@@ -177,21 +260,27 @@ spec:
         pipelines.kubeflow.org/component_ref: '{"digest": "645fe04c1102aec1f24035c6a52bb23b9cd89f38fc7ccab23531e6bd6e7df5b8",
           "url": "../components/trans.yaml"}'}
   - name: try
+    inputs:
+      parameters:
+      - {name: translate}
     dag:
       tasks:
-      - {name: read, template: read}
-      - name: tag
-        template: tag
-        dependencies: [trans]
-        arguments:
-          artifacts:
-          - {name: trans-output_text, from: '{{tasks.trans.outputs.artifacts.trans-output_text}}'}
-      - name: trans
-        template: trans
+      - name: condition-1
+        template: condition-1
+        when: '"{{inputs.parameters.translate}}" == "True"'
         dependencies: [read]
         arguments:
           artifacts:
           - {name: read-output_text, from: '{{tasks.read.outputs.artifacts.read-output_text}}'}
+      - name: condition-2
+        template: condition-2
+        when: '"{{inputs.parameters.translate}}" == "False"'
+        dependencies: [read]
+        arguments:
+          artifacts:
+          - {name: read-output_text, from: '{{tasks.read.outputs.artifacts.read-output_text}}'}
+      - {name: read, template: read}
   arguments:
-    parameters: []
+    parameters:
+    - {name: translate}
   serviceAccountName: pipeline-runner
