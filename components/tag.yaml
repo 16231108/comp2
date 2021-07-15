@@ -1,0 +1,40 @@
+name: Tag
+inputs:
+- {name: text}
+outputs:
+- {name: output_text}
+implementation:
+  container:
+    image: star16231108/python:3.7
+    command:
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp)
+      printf "%s" "$0" > "$program_path"
+      python3 -u "$program_path" "$@"
+    - |
+      def _make_parent_dirs_and_return_path(file_path: str):
+          import os
+          os.makedirs(os.path.dirname(file_path), exist_ok=True)
+          return file_path
+
+      def tag(text_path,output_text_path):
+          import numpy as np
+          import pandas as pd
+          data=pd.read_csv(text_path)
+          data=data[0:1]
+          data.to_csv(output_text_path,index=False)
+
+      import argparse
+      _parser = argparse.ArgumentParser(prog='Tag', description='')
+      _parser.add_argument("--text", dest="text_path", type=str, required=True, default=argparse.SUPPRESS)
+      _parser.add_argument("--output-text", dest="output_text_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+      _parsed_args = vars(_parser.parse_args())
+
+      _outputs = tag(**_parsed_args)
+    args:
+    - --text
+    - {inputPath: text}
+    - --output-text
+    - {outputPath: output_text}
