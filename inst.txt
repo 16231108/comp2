@@ -3,3 +3,5 @@ sshtunnel
 pymysql
 numpy
 pandas
+nltk
+sklearn

@@ -15,12 +15,12 @@ def mytry(translate):
 	return
 kfp.compiler.Compiler().compile(mytry, '../pipeline/mytry.yaml')
 
-client = kfp.Client(host='http://ml-pipeline.ingress.isa.buaanlsde.cn/')
-client.create_run_from_pipeline_func(
-    mytry,
-    arguments={'translate':True},
-    )
-client.create_run_from_pipeline_func(
-    mytry,
-    arguments={'translate':False},
-    )
+# client = kfp.Client(host='http://ml-pipeline.ingress.isa.buaanlsde.cn/')
+# client.create_run_from_pipeline_func(
+#     mytry,
+#     arguments={'translate':True},
+#     )
+# client.create_run_from_pipeline_func(
+#     mytry,
+#     arguments={'translate':False},
+#     )
