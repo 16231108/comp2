@@ -1,0 +1,47 @@
+name: K m
+inputs:
+- {name: text}
+outputs:
+- {name: output_text}
+implementation:
+  container:
+    image: star16231108/python:3.7.1
+    command:
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp)
+      printf "%s" "$0" > "$program_path"
+      python3 -u "$program_path" "$@"
+    - |
+      def _make_parent_dirs_and_return_path(file_path: str):
+          import os
+          os.makedirs(os.path.dirname(file_path), exist_ok=True)
+          return file_path
+
+      def k_m(text_path,output_text_path):
+          import pandas as pd
+          import numpy as np
+          from sklearn.cluster import KMeans
+          tfidf_matrix=pd.read_csv(text_path)
+          tfidf_matrix=tfidf_matrix['tfidf_matrix']
+          tfidf_matrix=[eval(i) for i in tfidf_matrix]
+          num_clusters=5
+          km=KMeans(n_clusters=num_clusters)
+          km.fit(tfidf_matrix)
+          clusters = km.labels_.tolist()
+          with open(output_text_path) as f:
+              f.write(km.cluster_centers_)
+
+      import argparse
+      _parser = argparse.ArgumentParser(prog='K m', description='')
+      _parser.add_argument("--text", dest="text_path", type=str, required=True, default=argparse.SUPPRESS)
+      _parser.add_argument("--output-text", dest="output_text_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+      _parsed_args = vars(_parser.parse_args())
+
+      _outputs = k_m(**_parsed_args)
+    args:
+    - --text
+    - {inputPath: text}
+    - --output-text
+    - {outputPath: output_text}

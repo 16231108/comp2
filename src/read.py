@@ -10,7 +10,7 @@ def read(output_text_path: OutputPath()):
     server.start()
     conn = pymysql.connect(host='127.0.0.1',  port=server.local_bind_port,user='root',  passwd='root' , charset ='utf8',   database = 'dump',)
     sql_get_total = f"select title from ms_paper_ghl_20201026"
-    df = pd.read_sql(sql_get_total, con=conn)[:2000]
+    df = pd.read_sql(sql_get_total, con=conn)[:100]
     df.to_csv(output_text_path,index=False)
-read('../t.csv')
-#read=create_component_from_func(read,base_image='star16231108/python:3.7',output_component_file='../components/read.yaml')
+#read('../t.csv')
+read=create_component_from_func(read,base_image='star16231108/python:3.7',output_component_file='../components/read.yaml')

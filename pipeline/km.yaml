@@ -1,0 +1,240 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: try-
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.6, pipelines.kubeflow.org/pipeline_compilation_time: '2021-07-28T21:35:12.737949',
+    pipelines.kubeflow.org/pipeline_spec: '{"name": "try"}'}
+  labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.6}
+spec:
+  entrypoint: try
+  templates:
+  - name: k-m
+    container:
+      args: [--text, /tmp/inputs/text/data, --output-text, /tmp/outputs/output_text/data]
+      command:
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def _make_parent_dirs_and_return_path(file_path: str):
+            import os
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            return file_path
+
+        def k_m(text_path,output_text_path):
+            import pandas as pd
+            import numpy as np
+            from sklearn.cluster import KMeans
+            tfidf_matrix=pd.read_csv(text_path)
+            tfidf_matrix=tfidf_matrix['tfidf_matrix']
+            tfidf_matrix=[eval(i) for i in tfidf_matrix]
+            num_clusters=5
+            km=KMeans(n_clusters=num_clusters)
+            km.fit(tfidf_matrix)
+            clusters = km.labels_.tolist()
+            with open(output_text_path) as f:
+                f.write(km.cluster_centers_)
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='K m', description='')
+        _parser.add_argument("--text", dest="text_path", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--output-text", dest="output_text_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+        _parsed_args = vars(_parser.parse_args())
+
+        _outputs = k_m(**_parsed_args)
+      image: star16231108/python:3.7.1
+    inputs:
+      artifacts:
+      - {name: tag-output_text, path: /tmp/inputs/text/data}
+    outputs:
+      artifacts:
+      - {name: k-m-output_text, path: /tmp/outputs/output_text/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.6.6
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"implementation": {"container":
+          {"args": ["--text", {"inputPath": "text"}, "--output-text", {"outputPath":
+          "output_text"}], "command": ["sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n    os.makedirs(os.path.dirname(file_path),
+          exist_ok=True)\n    return file_path\n\ndef k_m(text_path,output_text_path):\n    import
+          pandas as pd\n    import numpy as np\n    from sklearn.cluster import KMeans\n    tfidf_matrix=pd.read_csv(text_path)\n    tfidf_matrix=tfidf_matrix[''tfidf_matrix'']\n    tfidf_matrix=[eval(i)
+          for i in tfidf_matrix]\n    num_clusters=5\n    km=KMeans(n_clusters=num_clusters)\n    km.fit(tfidf_matrix)\n    clusters
+          = km.labels_.tolist()\n    with open(output_text_path) as f:\n        f.write(km.cluster_centers_)\n\nimport
+          argparse\n_parser = argparse.ArgumentParser(prog=''K m'', description='''')\n_parser.add_argument(\"--text\",
+          dest=\"text_path\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--output-text\",
+          dest=\"output_text_path\", type=_make_parent_dirs_and_return_path, required=True,
+          default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\n_outputs
+          = k_m(**_parsed_args)\n"], "image": "star16231108/python:3.7.1"}}, "inputs":
+          [{"name": "text"}], "name": "K m", "outputs": [{"name": "output_text"}]}',
+        pipelines.kubeflow.org/component_ref: '{"digest": "a75616c89ba73d1ace361183c8f5338a4d0a31957c174e33ad035f4b2ed3cdd5",
+          "url": "../components/k_m.yaml"}'}
+  - name: read
+    container:
+      args: [--output-text, /tmp/outputs/output_text/data]
+      command:
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def _make_parent_dirs_and_return_path(file_path: str):
+            import os
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            return file_path
+
+        def read(output_text_path):
+            from sshtunnel import SSHTunnelForwarder
+            import pymysql
+            import pandas as pd
+            import numpy as np
+            f=open(output_text_path,'w');
+            server=SSHTunnelForwarder(('47.92.240.36', 22),  ssh_username='jt',  ssh_password='vdaubCp7yaSreqlT', remote_bind_address=('192.168.0.84', 3306))
+            server.start()
+            conn = pymysql.connect(host='127.0.0.1',  port=server.local_bind_port,user='root',  passwd='root' , charset ='utf8',   database = 'dump',)
+            sql_get_total = f"select title from ms_paper_ghl_20201026"
+            df = pd.read_sql(sql_get_total, con=conn)[:100]
+            df.to_csv(output_text_path,index=False)
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='Read', description='')
+        _parser.add_argument("--output-text", dest="output_text_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+        _parsed_args = vars(_parser.parse_args())
+
+        _outputs = read(**_parsed_args)
+      image: star16231108/python:3.7
+    outputs:
+      artifacts:
+      - {name: read-output_text, path: /tmp/outputs/output_text/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.6.6
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"implementation": {"container":
+          {"args": ["--output-text", {"outputPath": "output_text"}], "command": ["sh",
+          "-ec", "program_path=$(mktemp)\nprintf \"%s\" \"$0\" > \"$program_path\"\npython3
+          -u \"$program_path\" \"$@\"\n", "def _make_parent_dirs_and_return_path(file_path:
+          str):\n    import os\n    os.makedirs(os.path.dirname(file_path), exist_ok=True)\n    return
+          file_path\n\ndef read(output_text_path):\n    from sshtunnel import SSHTunnelForwarder\n    import
+          pymysql\n    import pandas as pd\n    import numpy as np\n    f=open(output_text_path,''w'');\n    server=SSHTunnelForwarder((''47.92.240.36'',
+          22),  ssh_username=''jt'',  ssh_password=''vdaubCp7yaSreqlT'', remote_bind_address=(''192.168.0.84'',
+          3306))\n    server.start()\n    conn = pymysql.connect(host=''127.0.0.1'',  port=server.local_bind_port,user=''root'',  passwd=''root''
+          , charset =''utf8'',   database = ''dump'',)\n    sql_get_total = f\"select
+          title from ms_paper_ghl_20201026\"\n    df = pd.read_sql(sql_get_total,
+          con=conn)[:100]\n    df.to_csv(output_text_path,index=False)\n\nimport argparse\n_parser
+          = argparse.ArgumentParser(prog=''Read'', description='''')\n_parser.add_argument(\"--output-text\",
+          dest=\"output_text_path\", type=_make_parent_dirs_and_return_path, required=True,
+          default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\n_outputs
+          = read(**_parsed_args)\n"], "image": "star16231108/python:3.7"}}, "name":
+          "Read", "outputs": [{"name": "output_text"}]}', pipelines.kubeflow.org/component_ref: '{"digest":
+          "bc6776a1037427d5b0eed43816d97c009112dee1a9d2b83773163411458604c9", "url":
+          "../components/read.yaml"}'}
+  - name: tag
+    container:
+      args: [--text, /tmp/inputs/text/data, --output-text, /tmp/outputs/output_text/data]
+      command:
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n \
+        \   os.makedirs(os.path.dirname(file_path), exist_ok=True)\n    return file_path\n\
+        \ndef tag(text_path,output_text_path):\n    import pandas as pd\n    import\
+        \ numpy as np\n    import nltk\n    import re\n    synopses=pd.read_csv(text_path)\n\
+        \    synopses=synopses = np.array(synopses)\n    synopses = synopses.ravel()\n\
+        \    from nltk.stem.snowball import SnowballStemmer\n    stemmer = SnowballStemmer(\"\
+        english\")\n    nltk.download('punkt')\n    def tokenize_and_stem(text):\n\
+        \    # first tokenize by sentence, then by word to ensure that punctuation\
+        \ is caught as it's own token\n        tokens = [word for sent in nltk.sent_tokenize(text)\
+        \ for word in nltk.word_tokenize(sent)]\n        filtered_tokens = []\n  \
+        \  # filter out any tokens not containing letters (e.g., numeric tokens, raw\
+        \ punctuation)\n        for token in tokens:\n            if re.search('[a-zA-Z]',\
+        \ token):\n                filtered_tokens.append(token)\n        stems =\
+        \ [stemmer.stem(t) for t in filtered_tokens]\n        return stems\n    from\
+        \ sklearn.feature_extraction.text import TfidfVectorizer\n#define vectorizer\
+        \ parameters\n    tfidf_vectorizer = TfidfVectorizer(stop_words='english',\n\
+        \                                 use_idf=True, tokenizer=tokenize_and_stem)\n\
+        #%time\uFF1ATime execution of a Python statement or expression. https://ipython.readthedocs.io/en/stable/interactive/magics.html\n\
+        #%time tfidf_matrix = tfidf_vectorizer.fit_transform(synopses) #fit the vectorizer\
+        \ to synopses\n    tfidf_matrix = tfidf_vectorizer.fit_transform(synopses)\n\
+        \    tfidf_matrix = tfidf_matrix.toarray()\n    tfidf_matrix = [str(list(i))\
+        \ for i in tfidf_matrix]\n    data={'synopses':synopses,'tfidf_matrix':tfidf_matrix}\n\
+        \    data=pd.DataFrame(data)\n    data.to_csv(output_text_path,index=False)\n\
+        \nimport argparse\n_parser = argparse.ArgumentParser(prog='Tag', description='')\n\
+        _parser.add_argument(\"--text\", dest=\"text_path\", type=str, required=True,\
+        \ default=argparse.SUPPRESS)\n_parser.add_argument(\"--output-text\", dest=\"\
+        output_text_path\", type=_make_parent_dirs_and_return_path, required=True,\
+        \ default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\n\
+        _outputs = tag(**_parsed_args)\n"
+      image: star16231108/python:3.7.1
+    inputs:
+      artifacts:
+      - {name: read-output_text, path: /tmp/inputs/text/data}
+    outputs:
+      artifacts:
+      - {name: tag-output_text, path: /tmp/outputs/output_text/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.6.6
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"implementation": {"container":
+          {"args": ["--text", {"inputPath": "text"}, "--output-text", {"outputPath":
+          "output_text"}], "command": ["sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n    os.makedirs(os.path.dirname(file_path),
+          exist_ok=True)\n    return file_path\n\ndef tag(text_path,output_text_path):\n    import
+          pandas as pd\n    import numpy as np\n    import nltk\n    import re\n    synopses=pd.read_csv(text_path)\n    synopses=synopses
+          = np.array(synopses)\n    synopses = synopses.ravel()\n    from nltk.stem.snowball
+          import SnowballStemmer\n    stemmer = SnowballStemmer(\"english\")\n    nltk.download(''punkt'')\n    def
+          tokenize_and_stem(text):\n    # first tokenize by sentence, then by word
+          to ensure that punctuation is caught as it''s own token\n        tokens
+          = [word for sent in nltk.sent_tokenize(text) for word in nltk.word_tokenize(sent)]\n        filtered_tokens
+          = []\n    # filter out any tokens not containing letters (e.g., numeric
+          tokens, raw punctuation)\n        for token in tokens:\n            if re.search(''[a-zA-Z]'',
+          token):\n                filtered_tokens.append(token)\n        stems =
+          [stemmer.stem(t) for t in filtered_tokens]\n        return stems\n    from
+          sklearn.feature_extraction.text import TfidfVectorizer\n#define vectorizer
+          parameters\n    tfidf_vectorizer = TfidfVectorizer(stop_words=''english'',\n                                 use_idf=True,
+          tokenizer=tokenize_and_stem)\n#%time\uff1aTime execution of a Python statement
+          or expression. https://ipython.readthedocs.io/en/stable/interactive/magics.html\n#%time
+          tfidf_matrix = tfidf_vectorizer.fit_transform(synopses) #fit the vectorizer
+          to synopses\n    tfidf_matrix = tfidf_vectorizer.fit_transform(synopses)\n    tfidf_matrix
+          = tfidf_matrix.toarray()\n    tfidf_matrix = [str(list(i)) for i in tfidf_matrix]\n    data={''synopses'':synopses,''tfidf_matrix'':tfidf_matrix}\n    data=pd.DataFrame(data)\n    data.to_csv(output_text_path,index=False)\n\nimport
+          argparse\n_parser = argparse.ArgumentParser(prog=''Tag'', description='''')\n_parser.add_argument(\"--text\",
+          dest=\"text_path\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--output-text\",
+          dest=\"output_text_path\", type=_make_parent_dirs_and_return_path, required=True,
+          default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\n_outputs
+          = tag(**_parsed_args)\n"], "image": "star16231108/python:3.7.1"}}, "inputs":
+          [{"name": "text"}], "name": "Tag", "outputs": [{"name": "output_text"}]}',
+        pipelines.kubeflow.org/component_ref: '{"digest": "7cffec3425bf2dadce21899ece5c506b18d01b029753225724c3f0996c04f791",
+          "url": "../components/tag.yaml"}'}
+  - name: try
+    dag:
+      tasks:
+      - name: k-m
+        template: k-m
+        dependencies: [tag]
+        arguments:
+          artifacts:
+          - {name: tag-output_text, from: '{{tasks.tag.outputs.artifacts.tag-output_text}}'}
+      - {name: read, template: read}
+      - name: tag
+        template: tag
+        dependencies: [read]
+        arguments:
+          artifacts:
+          - {name: read-output_text, from: '{{tasks.read.outputs.artifacts.read-output_text}}'}
+  arguments:
+    parameters: []
+  serviceAccountName: pipeline-runner

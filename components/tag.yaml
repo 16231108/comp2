@@ -5,7 +5,7 @@ outputs:
 - {name: output_text}
 implementation:
   container:
-    image: star16231108/python:3.7
+    image: star16231108/python:3.7.1
     command:
     - sh
     - -ec
@@ -13,26 +13,34 @@ implementation:
       program_path=$(mktemp)
       printf "%s" "$0" > "$program_path"
       python3 -u "$program_path" "$@"
-    - |
-      def _make_parent_dirs_and_return_path(file_path: str):
-          import os
-          os.makedirs(os.path.dirname(file_path), exist_ok=True)
-          return file_path
-
-      def tag(text_path,output_text_path):
-          import numpy as np
-          import pandas as pd
-          data=pd.read_csv(text_path)
-          data=data[0:1]
-          data.to_csv(output_text_path,index=False)
-
-      import argparse
-      _parser = argparse.ArgumentParser(prog='Tag', description='')
-      _parser.add_argument("--text", dest="text_path", type=str, required=True, default=argparse.SUPPRESS)
-      _parser.add_argument("--output-text", dest="output_text_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
-      _parsed_args = vars(_parser.parse_args())
-
-      _outputs = tag(**_parsed_args)
+    - "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n   \
+      \ os.makedirs(os.path.dirname(file_path), exist_ok=True)\n    return file_path\n\
+      \ndef tag(text_path,output_text_path):\n    import pandas as pd\n    import\
+      \ numpy as np\n    import nltk\n    import re\n    synopses=pd.read_csv(text_path)\n\
+      \    synopses=synopses = np.array(synopses)\n    synopses = synopses.ravel()\n\
+      \    from nltk.stem.snowball import SnowballStemmer\n    stemmer = SnowballStemmer(\"\
+      english\")\n    nltk.download('punkt')\n    def tokenize_and_stem(text):\n \
+      \   # first tokenize by sentence, then by word to ensure that punctuation is\
+      \ caught as it's own token\n        tokens = [word for sent in nltk.sent_tokenize(text)\
+      \ for word in nltk.word_tokenize(sent)]\n        filtered_tokens = []\n    #\
+      \ filter out any tokens not containing letters (e.g., numeric tokens, raw punctuation)\n\
+      \        for token in tokens:\n            if re.search('[a-zA-Z]', token):\n\
+      \                filtered_tokens.append(token)\n        stems = [stemmer.stem(t)\
+      \ for t in filtered_tokens]\n        return stems\n    from sklearn.feature_extraction.text\
+      \ import TfidfVectorizer\n#define vectorizer parameters\n    tfidf_vectorizer\
+      \ = TfidfVectorizer(stop_words='english',\n                                \
+      \ use_idf=True, tokenizer=tokenize_and_stem)\n#%time\uFF1ATime execution of\
+      \ a Python statement or expression. https://ipython.readthedocs.io/en/stable/interactive/magics.html\n\
+      #%time tfidf_matrix = tfidf_vectorizer.fit_transform(synopses) #fit the vectorizer\
+      \ to synopses\n    tfidf_matrix = tfidf_vectorizer.fit_transform(synopses)\n\
+      \    tfidf_matrix = tfidf_matrix.toarray()\n    tfidf_matrix = [str(list(i))\
+      \ for i in tfidf_matrix]\n    data={'synopses':synopses,'tfidf_matrix':tfidf_matrix}\n\
+      \    data=pd.DataFrame(data)\n    data.to_csv(output_text_path,index=False)\n\
+      \nimport argparse\n_parser = argparse.ArgumentParser(prog='Tag', description='')\n\
+      _parser.add_argument(\"--text\", dest=\"text_path\", type=str, required=True,\
+      \ default=argparse.SUPPRESS)\n_parser.add_argument(\"--output-text\", dest=\"\
+      output_text_path\", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)\n\
+      _parsed_args = vars(_parser.parse_args())\n\n_outputs = tag(**_parsed_args)\n"
     args:
     - --text
     - {inputPath: text}

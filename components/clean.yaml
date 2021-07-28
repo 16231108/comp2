@@ -1,0 +1,57 @@
+name: Clean
+inputs:
+- {name: text}
+outputs:
+- {name: output_text}
+- {name: o2}
+implementation:
+  container:
+    image: star16231108/python:3.7
+    command:
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp)
+      printf "%s" "$0" > "$program_path"
+      python3 -u "$program_path" "$@"
+    - "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n   \
+      \ os.makedirs(os.path.dirname(file_path), exist_ok=True)\n    return file_path\n\
+      \ndef clean(text_path,output_text_path,o2):\n    import numpy as np\n    import\
+      \ pandas as pd\n    import nltk,re\n    #nltk.download('punkt')\n    synopses\
+      \ = pd.read_csv(text_path)[:100]\n    synopses = np.array(synopses)\n    synopses\
+      \ = synopses.ravel()\n    from nltk.stem.snowball import SnowballStemmer\n \
+      \   stemmer = SnowballStemmer(\"english\")\n    def tokenize_and_stem(text):\n\
+      \    # first tokenize by sentence, then by word to ensure that punctuation is\
+      \ caught as it's own token\n        tokens = [word for sent in nltk.sent_tokenize(text)\
+      \ for word in nltk.word_tokenize(sent)]\n        filtered_tokens = []\n    #\
+      \ filter out any tokens not containing letters (e.g., numeric tokens, raw punctuation)\n\
+      \        for token in tokens:\n            if re.search('[a-zA-Z]', token):\n\
+      \                filtered_tokens.append(token)\n        stems = [stemmer.stem(t)\
+      \ for t in filtered_tokens]\n        return stems\n    def tokenize_only(text):\n\
+      \    # first tokenize by sentence, then by word to ensure that punctuation is\
+      \ caught as it's own token\n        tokens = [word.lower() for sent in nltk.sent_tokenize(text)\
+      \ for word in nltk.word_tokenize(sent)]\n        filtered_tokens = []\n    #\
+      \ filter out any tokens not containing letters (e.g., numeric tokens, raw punctuation)\n\
+      \        for token in tokens:\n            if re.search('[a-zA-Z]', token):\n\
+      \                filtered_tokens.append(token)\n        return filtered_tokens\n\
+      \    totalvocab_stemmed = []\n    totalvocab_tokenized = []\n    for i in synopses:\n\
+      \        allwords_stemmed = tokenize_and_stem(i) #for each item in 'synopses',\
+      \ tokenize/stem\n        totalvocab_stemmed.extend(allwords_stemmed) #extend\
+      \ the 'totalvocab_stemmed' list   \n        allwords_tokenized = tokenize_only(i)\n\
+      \        totalvocab_tokenized.extend(allwords_tokenized)\n    data={'stemmed':totalvocab_stemmed}\n\
+      \    frame=pd.DataFrame(data)\n    frame.to_csv(output_text_path,index=False)\n\
+      \    data={'tokenized':totalvocab_tokenized}\n    frame=pd.DataFrame(data)\n\
+      \    frame.to_csv(o2,index=False)\n\nimport argparse\n_parser = argparse.ArgumentParser(prog='Clean',\
+      \ description='')\n_parser.add_argument(\"--text\", dest=\"text_path\", type=str,\
+      \ required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--output-text\"\
+      , dest=\"output_text_path\", type=_make_parent_dirs_and_return_path, required=True,\
+      \ default=argparse.SUPPRESS)\n_parser.add_argument(\"--o2\", dest=\"o2\", type=_make_parent_dirs_and_return_path,\
+      \ required=True, default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\
+      \n_outputs = clean(**_parsed_args)\n"
+    args:
+    - --text
+    - {inputPath: text}
+    - --output-text
+    - {outputPath: output_text}
+    - --o2
+    - {outputPath: o2}
